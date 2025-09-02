@@ -1,4 +1,3 @@
-// app/layout.tsx
 import type { Metadata } from 'next';
 import { Inter, Squada_One } from 'next/font/google';
 import './globals.css';
@@ -7,8 +6,8 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-body' });
 const squada = Squada_One({ weight: '400', subsets: ['latin'], variable: '--font-heading' });
 
 export const metadata: Metadata = {
-  title: 'Moodex Labs — The Crypto Mood Console',
-  description: 'Fast market mood, trends & headlines — built for clarity.',
+  title: 'Moodex — The Mood of the Market',
+  description: 'Sentiment & trend intelligence across markets — explained in plain language.',
   themeColor: '#0d1720',
 };
 
