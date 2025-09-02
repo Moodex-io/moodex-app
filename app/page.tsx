@@ -1,27 +1,38 @@
+// app/page.tsx
 import AskClient from '@/components/AskClient';
-// import EmailCapture from '@/components/EmailCapture' // enable after Supabase table exists
 
 export default function Home() {
   return (
-    <main className="grid gap-8 p-6 md:p-10"
-          style={{gridTemplateColumns:'repeat(12, minmax(0,1fr))'}}>
-      <section className="col-[1/13] text-center space-y-2">
-        <h1 className="text-3xl md:text-5xl font-black tracking-wide">THE CRYPTO MOOD CONSOLE</h1>
-        <p className="opacity-80">FAST VERDICTS • TRENDS &amp; HEADLINES • BUILT FOR CLARITY</p>
-        {/* <div className="mt-6 flex justify-center"><EmailCapture /></div> */}
-      </section>
+    <main className="container py-12 md:py-16">
+      {/* Header */}
+      <header className="mb-10 md:mb-14 text-center">
+        <div className="badge mb-3">BETA</div>
+        <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-white drop-shadow-md">
+          THE CRYPTO MOOD CONSOLE
+        </h1>
+        <p className="mt-3 text-sm md:text-base text-teal-200/80">
+          FAST VERDICTS • TRENDS &amp; HEADLINES • BUILT FOR CLARITY
+        </p>
+      </header>
 
-      <section className="col-[1/13] md:col-[1/7]">
-        <AskClient />
-      </section>
+      {/* Main grid */}
+      <section className="grid md:grid-cols-2 gap-6 md:gap-8">
+        <div className="card p-5 md:p-6">
+          <h2 className="text-lg font-semibold text-cyan-200 mb-2">Ask Mood-E</h2>
+          <p className="text-sm text-teal-200/70 mb-4">
+            Try: <span className="font-semibold text-teal-100">Market mood</span>,{' '}
+            <span className="font-semibold text-teal-100">BTC today</span>,{' '}
+            <span className="font-semibold text-teal-100">Trending coins</span>.
+          </p>
+          <AskClient hideWorkerNote />
+        </div>
 
-      <section className="col-[1/13] md:col-[7/13]">
-        <div className="rounded-xl border border-white/10 p-5 bg-white/5">
-          <h2 className="text-xl font-bold mb-2">Status</h2>
-          <ul className="opacity-80 list-disc pl-5 space-y-1 m-0">
-            <li>Next.js 14 App Router</li>
-            <li>Vercel build-ready</li>
-            <li>Uses <code>NEXT_PUBLIC_WORKER_URL</code> for chat</li>
+        <div className="card p-5 md:p-6">
+          <h2 className="text-lg font-semibold text-cyan-200 mb-2">What you get</h2>
+          <ul className="list-disc pl-5 text-sm text-teal-200/80 space-y-2">
+            <li>One-line mood verdict + key numbers (market cap, volume, dominance).</li>
+            <li>Daily fear &amp; greed index.</li>
+            <li>Trending coins + distilled headlines (no doomscrolling).</li>
           </ul>
         </div>
       </section>
