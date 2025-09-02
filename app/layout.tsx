@@ -1,12 +1,19 @@
-export const metadata = {
-  title: 'Moodex Labs',
-  description: 'The crypto mood console',
+// app/layout.tsx
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
+
+const inter = Inter({ subsets: ['latin'] });
+
+export const metadata: Metadata = {
+  title: 'Moodex Labs — The Crypto Mood Console',
+  description: 'Fast market mood, trends & headlines — built for clarity.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-neutral-950 text-neutral-100">{children}</body>
+      <body className={inter.className}>{children}</body>
     </html>
   );
 }
