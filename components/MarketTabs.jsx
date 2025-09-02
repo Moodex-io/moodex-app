@@ -1,14 +1,20 @@
 export default function MarketTabs({ value, onChange }) {
-  const items = ['crypto', 'stocks', 'brands', 'politics', 'entertainment'];
+  const items = [
+    { id:'crypto', label:'Crypto' },
+    { id:'stocks', label:'Stocks' },
+    { id:'brands', label:'Brands' },
+    { id:'politics', label:'Politics' },
+    { id:'entertainment', label:'Entertainment' },
+  ];
   return (
     <div className="tabs">
-      {items.map((m) => (
+      {items.map(({id,label}) => (
         <button
-          key={m}
-          className={`tab ${value === m ? 'is-active' : ''}`}
-          onClick={() => onChange(m)}
+          key={id}
+          className={`tab ${value === id ? 'is-active' : ''}`}
+          onClick={() => onChange(id)}
         >
-          {m.toUpperCase()}
+          {label}
         </button>
       ))}
     </div>
