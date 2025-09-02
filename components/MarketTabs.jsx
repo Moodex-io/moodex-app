@@ -8,13 +8,13 @@ export default function MarketTabs({ value, onChange }) {
   ];
   return (
     <div className="tabs">
-      {items.map(({id,label}) => (
+      {items.map(t => (
         <button
-          key={id}
-          className={`tab ${value === id ? 'is-active' : ''}`}
-          onClick={() => onChange(id)}
+          key={t.id}
+          className={`tab ${value === t.id ? 'is-active' : ''}`}
+          onClick={() => onChange(t.id)}
         >
-          {label}
+          {t.label}
         </button>
       ))}
     </div>
