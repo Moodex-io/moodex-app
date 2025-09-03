@@ -1,31 +1,58 @@
 'use client';
+
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase-client';
+import { getSupabase } from '@/lib/supabase-client';
 
 export default function EmailCapture() {
   const [email, setEmail] = useState('');
-  const [status, setStatus] = useState<'idle'|'loading'|'ok'|'err'>('idle');
+  const [status, setStatus] = useState<'idle'|'ok'|'err'|'loading'>('idle');
+
+  const hosted = process.env.NEXT_PUBLIC_SIGNUP_URL; // optional hosted form
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email) return;
-    setStatus('loading');
-    const { error } = await supabase.from('waitlist').insert({ email });
-    setStatus(error ? 'err' : 'ok');
-    if (!error) setEmail('');
+
+    // Try client Supabase; fall back to hosted URL if not configured
+    const supabase = getSupabase();
+    if (!supabase) {
+      if (hosted) {
+        const url = `${hosted}${hosted.includes('?') ? '&' : '?'}email=${encodeURIComponent(email)}`;
+        window.open(url, '_blank');
+        setStatus('ok');
+      } else {
+        setStatus('err');
+      }
+      return;
+    }
+
+    try {
+      setStatus('loading');
+      const { error } = await supabase.from('email_signups').insert({ email });
+      if (error) throw error;
+      setStatus('ok');
+      setEmail('');
+    } catch {
+      setStatus('err');
+    }
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex gap-2">
-      <input className="px-3 py-2 rounded bg-white/10 border border-white/15"
-             type="email" placeholder="email@you.com" required
-             value={email} onChange={e=>setEmail(e.target.value)} />
-      <button className="px-4 py-2 rounded bg-cyan-500 font-bold"
-              disabled={status==='loading'}>
-        {status==='loading' ? 'Saving…' : 'Join Beta'}
+    <form onSubmit={onSubmit} className="email-capture">
+      <input
+        type="email"
+        required
+        placeholder="YOU@COMPANY.COM"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className="input"
+        autoComplete="email"
+      />
+      <button className="btn btn-primary" disabled={status==='loading'}>
+        {status === 'loading' ? 'SAVING…' : 'JOIN THE BETA'}
       </button>
-      {status==='ok' && <span className="opacity-80">Thanks! 🎉</span>}
-      {status==='err' && <span className="opacity-80">Try again</span>}
+      {status === 'ok' && <div className="muted">Thanks! We’ll be in touch.</div>}
+      {status === 'err' && <div className="muted">Couldn’t save right now. Try again later.</div>}
     </form>
   );
 }
