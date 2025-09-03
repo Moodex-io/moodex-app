@@ -10,10 +10,13 @@ import Pricing from '@/components/Pricing'
 import CTA from '@/components/CTA'
 import Footer from '@/components/Footer'
 
-// New imports
+// New panels
 import Trending from '@/components/Trending'
 import Headlines from '@/components/Headlines'
-import EmailCapture from '@/components/EmailCapture'
+
+// Load EmailCapture only on client to avoid SSR env issues
+import dynamic from 'next/dynamic'
+const EmailCapture = dynamic(() => import('@/components/EmailCapture'), { ssr: false })
 
 export default function Page() {
   return (
@@ -36,7 +39,7 @@ export default function Page() {
           <Headlines title="Latest crypto news" market="crypto" />
         </div>
 
-        {/* Email capture callout */}
+        {/* Email capture callout (client-only) */}
         <section className="mt-12 flex justify-center">
           <EmailCapture />
         </section>
