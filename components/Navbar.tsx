@@ -10,10 +10,10 @@ export default function Navbar() {
           <Image
             src="/brand/moodexlogo.png"
             alt="Moodex"
-            width={140}   // tweak size as needed
-            height={40}
+            width={180}   // increased width
+            height={50}   // increased height
             priority
-            className="h-10 w-auto"
+            className="h-12 w-auto" // was h-10 → bumped to h-12
           />
         </Link>
       </div>
