@@ -3,22 +3,28 @@
 import { useState } from 'react';
 import { getSupabase } from '@/lib/supabase-client';
 
-export default function EmailCapture() {
+type Props = {
+  /** Where this form lives: 'hero' | 'footer' | 'modal' | etc. */
+  source?: string;
+};
+
+export default function EmailCapture({ source = 'hero' }: Props) {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'ok' | 'err' | 'loading'>('idle');
 
-  const hosted = process.env.NEXT_PUBLIC_SIGNUP_URL; // optional hosted form
+  // Optional hosted fallback (e.g., Carrd/ConvertKit form)
+  const hosted = process.env.NEXT_PUBLIC_SIGNUP_URL;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email) return;
 
     const supabase = getSupabase();
+
+    // If Supabase isn’t configured, fall back to hosted form (if provided)
     if (!supabase) {
       if (hosted) {
-        const url = `${hosted}${hosted.includes('?') ? '&' : '?'}email=${encodeURIComponent(
-          email
-        )}`;
+        const url = `${hosted}${hosted.includes('?') ? '&' : '?'}email=${encodeURIComponent(email)}&source=${encodeURIComponent(source)}`;
         window.open(url, '_blank');
         setStatus('ok');
       } else {
@@ -29,8 +35,15 @@ export default function EmailCapture() {
 
     try {
       setStatus('loading');
-      const { error } = await supabase.from('email_signups').insert({ email });
-      if (error) throw error;
+
+      // Insert with a source so we can track placement performance
+      const { error } = await supabase.from('email_signups').insert({ email, source });
+
+      // If email is unique and already exists, Supabase will throw 23505 (unique_violation)
+      // We treat that as success to avoid confusing users who already signed up.
+      // @ts-ignore (Supabase error has .code)
+      if (error && error.code !== '23505') throw error;
+
       setStatus('ok');
       setEmail('');
     } catch {
@@ -60,9 +73,10 @@ export default function EmailCapture() {
           {status === 'loading' ? 'SAVING…' : 'JOIN THE BETA'}
         </button>
 
-        {/* Inline feedback */}
         {status === 'ok' && (
-          <div className="muted w-full text-center sm:text-left">Thanks! We’ll be in touch.</div>
+          <div className="muted w-full text-center sm:text-left">
+            Thanks! We’ll be in touch.
+          </div>
         )}
         {status === 'err' && (
           <div className="muted w-full text-center sm:text-left">
