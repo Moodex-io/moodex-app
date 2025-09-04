@@ -1,54 +1,28 @@
+// components/EmailCapture.tsx
 'use client';
 
 import { useState } from 'react';
-import { getSupabase } from '@/lib/supabase-client';
 
 export default function EmailCapture() {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'ok' | 'err' | 'loading'>('idle');
-  const [debug, setDebug] = useState<string | null>(null); // <- show exact error in dev
-
-  const hosted = process.env.NEXT_PUBLIC_SIGNUP_URL; // optional fallback form
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setDebug(null);
-
     if (!email) return;
-
-    const supabase = getSupabase();
-    if (!supabase) {
-      if (hosted) {
-        const url = `${hosted}${hosted.includes('?') ? '&' : '?'}email=${encodeURIComponent(email)}`;
-        window.open(url, '_blank');
-        setStatus('ok');
-      } else {
-        setStatus('err');
-        setDebug('Supabase client not configured (missing envs).');
-      }
-      return;
-    }
-
     try {
       setStatus('loading');
-
-      // include a source so you can see where the signup came from
-      const { error } = await supabase
-        .from('email_signups')
-        .insert({ email, source: 'hero' });
-
-      if (error) {
-        console.error('[EmailCapture] insert error:', error);
-        setDebug(`${error.code ?? ''} ${error.message ?? error.toString()}`);
-        throw error;
-      }
-
+      const r = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email, source: 'hero' }),
+      });
+      const json = await r.json();
+      if (!r.ok || !json.ok) throw new Error('bad');
       setStatus('ok');
       setEmail('');
-    } catch (e: any) {
-      console.error('[EmailCapture] failed:', e);
+    } catch {
       setStatus('err');
-      if (!debug) setDebug(e?.message ?? String(e));
     }
   }
 
@@ -72,18 +46,13 @@ export default function EmailCapture() {
         </button>
 
         {status === 'ok' && (
-          <div className="muted w-full text-center sm:text-left">Thanks! We’ll be in touch.</div>
+          <div className="muted w-full text-center sm:text-left">
+            Thanks! We’ll be in touch.
+          </div>
         )}
         {status === 'err' && (
           <div className="muted w-full text-center sm:text-left">
             Couldn’t save right now. Try again later.
-          </div>
-        )}
-
-        {/* Dev-only error details (won’t show in production UI) */}
-        {process.env.NODE_ENV !== 'production' && debug && (
-          <div className="muted w-full text-center sm:text-left">
-            <span className="opacity-70">debug:</span> {debug}
           </div>
         )}
       </form>
