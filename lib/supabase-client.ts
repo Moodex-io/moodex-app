@@ -1,19 +1,15 @@
-// lib/supabase-client.ts
-'use client';
+"use client";
+import { createClient } from "@supabase/supabase-js";
 
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+let client: ReturnType<typeof createClient> | null = null;
 
-let singleton: SupabaseClient | undefined;
-
-/**
- * Returns a browser-only Supabase client, or undefined if env vars are missing.
- * Never constructs during SSR/prerender.
- */
 export function getSupabase() {
-  if (typeof window === 'undefined') return undefined; // guard SSR
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anon) return undefined;
-  if (!singleton) singleton = createClient(url, anon);
-  return singleton;
+  if (!url || !anon) return null; // lets the form fall back if not configured
+
+  if (!client) {
+    client = createClient(url, anon, { auth: { persistSession: false } });
+  }
+  return client;
 }
