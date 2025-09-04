@@ -1,18 +1,21 @@
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Navbar() {
   return (
     <nav className="wrap py-5 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        {/* Logo image */}
-        <Image
-          src="/brand/moodex-logo.png"
-          alt="Moodex"
-          width={140} // adjust as needed
-          height={40}
-          priority
-          className="h-10 w-auto"
-        />
+        {/* Logo wrapped in a home link */}
+        <Link href="/" className="flex items-center">
+          <Image
+            src="/brand/moodexlogo.png"
+            alt="Moodex"
+            width={140}   // tweak size as needed
+            height={40}
+            priority
+            className="h-10 w-auto"
+          />
+        </Link>
       </div>
       <div className="hidden md:flex items-center gap-6 text-slate-300">
         <a href="#features" className="hover:text-white">Features</a>
