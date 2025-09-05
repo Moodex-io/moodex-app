@@ -1,41 +1,43 @@
-import { NextResponse } from 'next/server';
+// app/api/send-welcome/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { Resend } from "resend";
+import { welcomeEmailHTML } from "@/lib/email/welcome";
 
-export async function POST(req: Request) {
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// optional: change the friendly name
+const FROM = `Moodex <noreply@mg.moodex.io>`;
+
+export async function POST(req: NextRequest) {
   try {
     const { email } = await req.json();
 
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'Moodex <noreply@mg.moodex.io>',
-        to: email,
-        subject: '👋 Welcome to Moodex Beta!',
-        html: `
-          <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;background:#0d1117;color:#fff;padding:20px;border-radius:8px;">
-            <div style="text-align:center;">
-              <img src="https://moodex.io/brand/moodexlogo.png" alt="Moodex Logo" style="height:60px;margin-bottom:20px;" />
-              <h1 style="color:#00e2fb;">Welcome to Moodex Beta 🚀</h1>
-              <p>Thanks for joining the beta! You're officially part of the Moodex early access group.</p>
-              <p>We'll keep you updated with new features and exclusive invites as we roll them out.</p>
-              <a href="https://moodex.io" style="display:inline-block;background:linear-gradient(135deg,#00e2fb,#ff00c3);padding:12px 24px;color:#fff;text-decoration:none;border-radius:6px;margin-top:20px;">Visit Moodex</a>
-              <p style="margin-top:30px;font-size:12px;color:#aaa;">You’re receiving this email because you signed up at moodex.io</p>
-            </div>
-          </div>
-        `,
-      }),
-    });
-
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(err);
+    if (!email || typeof email !== "string") {
+      return NextResponse.json({ ok: false, error: "Invalid email" }, { status: 400 });
     }
 
-    return NextResponse.json({ ok: true });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://moodex.io";
+
+    const html = welcomeEmailHTML({
+      siteUrl,
+      logoUrl: "/brand/moodexlogo.png",
+      heroUrl: "/email/mascot.png", // safe even if you haven't added it—image just won’t render
+      ctaHref: siteUrl,
+    });
+
+    const { data, error } = await resend.emails.send({
+      from: FROM,
+      to: email,
+      subject: "Welcome to Moodex Beta 🎉",
+      html,
+    });
+
+    if (error) {
+      return NextResponse.json({ ok: false, error }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true, id: data?.id });
+  } catch (e: any) {
+    return NextResponse.json({ ok: false, error: e?.message || "send failed" }, { status: 500 });
   }
 }
