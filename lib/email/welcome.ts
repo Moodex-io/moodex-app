@@ -12,6 +12,15 @@ export function welcomeEmailHTML(opts: {
     ctaHref = siteUrl,
   } = opts;
 
+  // Precompute a safe hostname so we don't need any regex in the template
+  const safeHost = (() => {
+    try {
+      return new URL(siteUrl).host || siteUrl;
+    } catch {
+      return siteUrl.replace("https://", "").replace("http://", "");
+    }
+  })();
+
   const abs = (p: string) => (p.startsWith("http") ? p : `${siteUrl}${p}`);
 
   return `<!doctype html>
@@ -91,7 +100,7 @@ export function welcomeEmailHTML(opts: {
                   <td align="center" style="padding-top:8px;">
                     <p class="muted" style="font-size:12px; line-height:1.6; margin:0;">
                       You received this because you signed up at
-                      <a href="${siteUrl}" style="color:#9cd7ff;">${siteUrl.replace(/^https?:\\/\\//, "")}</a>.
+                      <a href="${siteUrl}" style="color:#9cd7ff;">${safeHost}</a>.
                       If this wasn't you, please ignore this email.
                     </p>
                   </td>
