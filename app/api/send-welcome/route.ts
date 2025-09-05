@@ -1,43 +1,53 @@
 // app/api/send-welcome/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { Resend } from "resend";
-import { welcomeEmailHTML } from "@/lib/email/welcome";
+import { renderWelcomeEmail } from "@/lib/email/welcome";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// optional: change the friendly name
-const FROM = `Moodex <noreply@mg.moodex.io>`;
+// Build absolute URLs to /public assets. On Vercel, NEXT_PUBLIC_BASE_URL
+// should be your prod site (e.g. https://moodex.io or https://moodex.vercel.app)
+function abs(path: string) {
+  const base =
+    process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/+$/, "") ||
+    "https://moodex.vercel.app";
+  return `${base}${path.startsWith("/") ? "" : "/"}${path}`;
+}
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    const { email } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const email = (body?.email || "").toString().trim();
 
-    if (!email || typeof email !== "string") {
-      return NextResponse.json({ ok: false, error: "Invalid email" }, { status: 400 });
+    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      return NextResponse.json({ ok: false, error: "invalid_email" }, { status: 400 });
     }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://moodex.io";
+    const siteUrl =
+      process.env.NEXT_PUBLIC_BASE_URL ||
+      "https://moodex.vercel.app";
 
-    const html = welcomeEmailHTML({
+    const html = renderWelcomeEmail({
       siteUrl,
-      logoUrl: "/brand/moodexlogo.png",
-      heroUrl: "/email/mascot.png", // safe even if you haven't added it—image just won’t render
-      ctaHref: siteUrl,
+      logoUrl: abs("/brand/moodexlogo.png"),
+      mascotUrl: abs("/brand/mascot.png"),
+      ctaUrl: siteUrl,
     });
 
-    const { data, error } = await resend.emails.send({
-      from: FROM,
+    const { error } = await resend.emails.send({
+      from: "Moodex <noreply@mg.moodex.io>",
       to: email,
       subject: "Welcome to Moodex Beta 🎉",
       html,
     });
 
     if (error) {
-      return NextResponse.json({ ok: false, error }, { status: 500 });
+      // Resend shows “bounced” in dashboard if address is invalid
+      return NextResponse.json({ ok: false, error: String(error) }, { status: 500 });
     }
 
-    return NextResponse.json({ ok: true, id: data?.id });
+    return NextResponse.json({ ok: true });
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message || "send failed" }, { status: 500 });
+    return NextResponse.json({ ok: false, error: String(e?.message || e) }, { status: 500 });
   }
 }
