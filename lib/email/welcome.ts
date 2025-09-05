@@ -1,67 +1,77 @@
+// lib/email/welcome.ts
 export function welcomeEmail(siteUrl: string) {
   const base = siteUrl.replace(/\/$/, "");
   const cleanHost = base.replace(/^https?:\/\/(www\.)?/i, "");
+
   const logoUrl = `${base}/brand/moodexlogo.png`;
   const mascotUrl = `${base}/brand/mascot.png`;
 
   return `
-<body style="margin:0; padding:0; font-family:Arial, sans-serif; background:#0a0f1c; color:#ffffff;">
-  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background:#0a0f1c; padding:40px 0;">
+<body style="margin:0; padding:0; background:#0a0f1c; font-family: Arial, Helvetica, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0a0f1c; padding:32px 0;">
     <tr>
       <td align="center">
 
-        <!-- Logo -->
-        <img src="${logoUrl}" alt="Moodex Logo" width="140" style="margin-bottom:12px; display:block;" />
-
-        <!-- Mascot -->
-        <img src="${mascotUrl}" alt="Moodex Mascot" width="110" style="margin-bottom:28px; display:block;" />
-
-        <!-- Card -->
-        <table width="600" cellpadding="0" cellspacing="0" style="background:#101828; border-radius:12px; padding:40px; text-align:center;">
+        <!-- header: logo + mascot -->
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px; margin:0 auto;">
           <tr>
-            <td>
+            <td align="center" style="padding-bottom:16px;">
+              <img src="${logoUrl}" width="150" alt="Moodex" style="display:block; border:0; outline:none; text-decoration:none;" />
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding-bottom:24px;">
+              <img src="${mascotUrl}" width="110" alt="Moodex mascot" style="display:block; border:0; outline:none; text-decoration:none;" />
+            </td>
+          </tr>
+        </table>
 
-              <h1 style="color:#ffffff; font-size:26px; margin:0 0 16px;">
-                🎉 Welcome to the Moodex Beta 🎉
+        <!-- card -->
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px; background:#101828; border-radius:12px; padding:40px; color:#ffffff;">
+          <tr>
+            <td align="center">
+
+              <h1 style="margin:0 0 14px; font-size:26px; line-height:1.3; color:#ffffff;">
+                Welcome to the Moodex Beta 🚀
               </h1>
 
-              <p style="color:#9ca3af; font-size:16px; line-height:1.6; margin:0 0 20px;">
-                You’ve officially joined the <strong>Moodex Early Access</strong> community! 🚀  
-                Get ready to explore market moods, real-time sentiment, and insights that help you
-                act on <em>signal</em>, not noise.
+              <p style="margin:0 0 16px; font-size:16px; line-height:1.6; color:#cbd5e1;">
+                You’re officially on the Early Access list! Moodex reveals live market mood & narrative signals so you act on <em>signal</em>, not noise.
               </p>
 
-              <p style="color:#9ca3af; font-size:16px; line-height:1.6; margin:0 0 24px;">
-                As one of the first pioneers, your feedback will help shape the future of Moodex.
-                We’re excited to have you on board!
+              <p style="margin:0 0 24px; font-size:16px; line-height:1.6; color:#cbd5e1;">
+                As an early pioneer, your feedback helps shape the product. We’re excited you’re here.
               </p>
 
-              <!-- CTA Button -->
-              <table cellspacing="0" cellpadding="0" style="margin:24px auto;">
+              <!-- CTA -->
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:18px auto 8px;">
                 <tr>
-                  <td align="center" bgcolor="#6366f1" style="border-radius:8px;">
+                  <td align="center" bgcolor="#6d28d9" style="border-radius:10px;">
                     <a href="${base}"
-                       style="display:inline-block; padding:14px 28px; font-size:16px; color:#ffffff;
-                              text-decoration:none; font-weight:bold; background:linear-gradient(90deg,#06b6d4,#a855f7);
-                              border-radius:8px;">
+                       style="display:inline-block; padding:14px 26px; font-weight:700; color:#ffffff; text-decoration:none; 
+                              background:linear-gradient(90deg,#06b6d4,#a855f7); border-radius:10px;">
                       Explore Moodex
                     </a>
                   </td>
                 </tr>
               </table>
 
-              <h2 style="color:#ffffff; font-size:18px; margin:30px 0 12px;">✨ What’s Next</h2>
-              <ul style="color:#9ca3af; font-size:14px; line-height:1.8; margin:0; padding:0 0 0 18px; text-align:left;">
-                <li>Beta access links when your group opens</li>
-                <li>Feature updates, drops, and improvements</li>
-                <li>Exclusive perks for early adopters</li>
-              </ul>
+              <h2 style="margin:28px 0 10px; font-size:18px; color:#ffffff;">What’s next</h2>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="text-align:left;">
+                <tr>
+                  <td style="color:#cbd5e1; font-size:14px; line-height:1.8;">
+                    • Beta access link when your cohort opens<br/>
+                    • Feature drops and changelogs<br/>
+                    • Occasional alpha perks for early users
+                  </td>
+                </tr>
+              </table>
 
-              <hr style="margin:28px 0; border:0; border-top:1px solid #2d3748;" />
+              <hr style="border:0; border-top:1px solid #233047; margin:28px 0;" />
 
-              <p style="font-size:12px; color:#9ca3af; line-height:1.6; margin:0;">
+              <p style="font-size:12px; line-height:1.6; color:#9ca3af; margin:0;">
                 You received this because you signed up at
-                <a href="${base}" style="color:#9cd7ff; text-decoration:none;">${cleanHost}</a>.  
+                <a href="${base}" style="color:#9cd7ff; text-decoration:none;">${cleanHost}</a>.
                 If this wasn’t you, please ignore this email.
               </p>
 
@@ -73,5 +83,5 @@ export function welcomeEmail(siteUrl: string) {
     </tr>
   </table>
 </body>
-  `;
+`;
 }
