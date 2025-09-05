@@ -1,54 +1,43 @@
 // app/api/send-welcome/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { Resend } from 'resend';
-import { welcomeEmailHTML } from '@/lib/email/welcome';
+import { NextResponse } from 'next/server'
+import { Resend } from 'resend'
+import { WelcomeEmail } from '@/lib/email/welcome'
 
-const FROM = 'Moodex <noreply@mg.moodex.io>';
+const resendApiKey = process.env.RESEND_API_KEY
+const fromEmail = process.env.RESEND_FROM || 'Moodex <noreply@mg.moodex.io>'
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://moodex.io'
 
-function absolutize(url: string, origin: string) {
-  if (/^https?:\/\//i.test(url)) return url;
-  return origin.replace(/\/+$/, '') + '/' + url.replace(/^\/+/, '');
-}
+export async function POST(req: Request) {
+  if (!resendApiKey) {
+    return NextResponse.json({ ok: false, error: 'RESEND_API_KEY missing' }, { status: 500 })
+  }
 
-export async function POST(req: NextRequest) {
   try {
-    const { email } = await req.json().catch(() => ({}));
-    const to = (email || '').toString().trim().toLowerCase();
-    if (!to || !to.includes('@')) {
-      return NextResponse.json({ ok: false, error: 'Invalid email' }, { status: 400 });
+    const { to } = await req.json().catch(() => ({}))
+    if (!to || typeof to !== 'string') {
+      return NextResponse.json({ ok: false, error: 'Missing "to"' }, { status: 400 })
     }
 
-    const RESEND_API_KEY = process.env.RESEND_API_KEY;
-    if (!RESEND_API_KEY) {
-      return NextResponse.json({ ok: false, error: 'RESEND_API_KEY missing' }, { status: 500 });
-    }
+    const resend = new Resend(resendApiKey)
 
-    const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
-    const resend = new Resend(RESEND_API_KEY);
+    // Render the email (React → HTML string)
+    const html = WelcomeEmail({ siteUrl })
 
-    const logoUrl = absolutize('/brand/moodexlogo.png', origin);
-    const heroUrl = absolutize('/brand/mascot.png', origin);
-
-    const html = welcomeEmailHTML({
-      siteUrl: origin,
-      logoUrl,
-      heroUrl,
-      ctaHref: origin,
-    });
-
-    const { data, error } = await resend.emails.send({
-      from: FROM,
+    const { error } = await resend.emails.send({
+      from: fromEmail,
       to,
       subject: 'Welcome to Moodex Beta 🎉',
       html,
-      headers: { 'X-Entity-Ref-ID': `manual-welcome-${to}-${Date.now()}` },
-    });
+    })
 
     if (error) {
-      return NextResponse.json({ ok: false, error: String(error) }, { status: 500 });
+      console.error('Resend error:', error)
+      return NextResponse.json({ ok: false, error }, { status: 502 })
     }
-    return NextResponse.json({ ok: true, id: data?.id });
+
+    return NextResponse.json({ ok: true })
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message || 'send failed' }, { status: 500 });
+    console.error('send-welcome error:', e?.message || e)
+    return NextResponse.json({ ok: false, error: 'Unhandled' }, { status: 500 })
   }
 }
