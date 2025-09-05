@@ -1,43 +1,54 @@
 // app/api/send-welcome/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
-import { welcomeEmailHTML } from "@/lib/email/welcome";
+import { NextRequest, NextResponse } from 'next/server';
+import { Resend } from 'resend';
+import { welcomeEmailHTML } from '@/lib/email/welcome';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const FROM = 'Moodex <noreply@mg.moodex.io>';
 
-// optional: change the friendly name
-const FROM = `Moodex <noreply@mg.moodex.io>`;
+function absolutize(url: string, origin: string) {
+  if (/^https?:\/\//i.test(url)) return url;
+  return origin.replace(/\/+$/, '') + '/' + url.replace(/^\/+/, '');
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const { email } = await req.json();
-
-    if (!email || typeof email !== "string") {
-      return NextResponse.json({ ok: false, error: "Invalid email" }, { status: 400 });
+    const { email } = await req.json().catch(() => ({}));
+    const to = (email || '').toString().trim().toLowerCase();
+    if (!to || !to.includes('@')) {
+      return NextResponse.json({ ok: false, error: 'Invalid email' }, { status: 400 });
     }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://moodex.io";
+    const RESEND_API_KEY = process.env.RESEND_API_KEY;
+    if (!RESEND_API_KEY) {
+      return NextResponse.json({ ok: false, error: 'RESEND_API_KEY missing' }, { status: 500 });
+    }
+
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
+    const resend = new Resend(RESEND_API_KEY);
+
+    const logoUrl = absolutize('/brand/moodexlogo.png', origin);
+    const heroUrl = absolutize('/brand/mascot.png', origin);
 
     const html = welcomeEmailHTML({
-      siteUrl,
-      logoUrl: "/brand/moodexlogo.png",
-      heroUrl: "/email/mascot.png", // safe even if you haven't added it—image just won’t render
-      ctaHref: siteUrl,
+      siteUrl: origin,
+      logoUrl,
+      heroUrl,
+      ctaHref: origin,
     });
 
     const { data, error } = await resend.emails.send({
       from: FROM,
-      to: email,
-      subject: "Welcome to Moodex Beta 🎉",
+      to,
+      subject: 'Welcome to Moodex Beta 🎉',
       html,
+      headers: { 'X-Entity-Ref-ID': `manual-welcome-${to}-${Date.now()}` },
     });
 
     if (error) {
-      return NextResponse.json({ ok: false, error }, { status: 500 });
+      return NextResponse.json({ ok: false, error: String(error) }, { status: 500 });
     }
-
     return NextResponse.json({ ok: true, id: data?.id });
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message || "send failed" }, { status: 500 });
+    return NextResponse.json({ ok: false, error: e?.message || 'send failed' }, { status: 500 });
   }
 }
