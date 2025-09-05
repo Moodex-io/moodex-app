@@ -1,42 +1,45 @@
 // app/api/subscribe/route.ts
-import { NextResponse } from 'next/server';
-import { Resend } from 'resend';
-import { createClient } from '@supabase/supabase-js';
-import { welcomeEmail } from '@/lib/email/welcome';
+import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.RESEND_FROM || 'Moodex <noreply@mg.moodex.io>';
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://moodex.io';
-
-const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-  : null;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export async function POST(req: Request) {
   try {
-    const { email, source = 'hero', ip } = await req.json();
+    const { email, source = 'hero' } = await req.json().catch(() => ({}))
 
     if (!email || typeof email !== 'string') {
-      return NextResponse.json({ ok: false, error: 'Missing email' }, { status: 400 });
+      return NextResponse.json({ ok: false, error: 'Missing email' }, { status: 400 })
     }
 
-    if (supabase) {
-      await supabase.from('email_signups').insert({ email, source, ip: ip ?? null });
+    // 1) Save to Supabase
+    const supabase = createClient(supabaseUrl, supabaseAnon)
+    const { error } = await supabase.from('email_signups').insert({ email, source })
+    if (error) {
+      console.error('supabase insert error:', error)
+      return NextResponse.json({ ok: false, error: 'DB insert failed' }, { status: 500 })
     }
 
-    // send fancy welcome email (non-blocking for the user)
-    if (process.env.RESEND_API_KEY) {
-      const html = welcomeEmail(SITE_URL);
-      await resend.emails.send({
-        from: FROM,
-        to: email,
-        subject: 'Welcome to Moodex Beta 🎉',
-        html,
-      });
+    // 2) Trigger the welcome email (server-to-server)
+    // Use the current origin for dev/preview/prod correctness
+    const origin = new URL(req.url).origin
+    const r = await fetch(`${origin}/api/send-welcome`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ to: email }),
+      // If send-welcome throws, we still want /subscribe to return an error so we notice it.
+    })
+
+    if (!r.ok) {
+      const t = await r.text().catch(() => '')
+      console.error('send-welcome failed:', r.status, t)
+      return NextResponse.json({ ok: false, error: 'Email send failed' }, { status: 502 })
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true })
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message ?? 'error' }, { status: 500 });
+    console.error('subscribe POST error:', e?.message || e)
+    return NextResponse.json({ ok: false, error: 'Unhandled' }, { status: 500 })
   }
 }
