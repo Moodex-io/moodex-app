@@ -1,102 +1,64 @@
+// app/api/subscribe/route.ts
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
-import { WelcomeEmail } from '@/lib/email/welcome';
 
-export const dynamic = 'force-dynamic'; // ensure it runs as a serverless fn
-
-function getAbsolute(url: string, origin: string) {
-  // ensure images work in emails
-  if (/^https?:\/\//i.test(url)) return url;
-  return origin.replace(/\/+$/, '') + '/' + url.replace(/^\/+/, '');
-}
+const FROM = 'Moodex <noreply@mg.moodex.io>'; // your verified Resend domain
 
 export async function POST(req: Request) {
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
-
-  const {
-    SUPABASE_URL = '',
-    SUPABASE_ANON_KEY = '',
-    RESEND_API_KEY = '',
-    RESEND_FROM = '',
-  } = process.env;
-
-  // sanity log (shows only booleans in logs, no secrets)
-  console.log('[subscribe] envs', {
-    hasSupabaseUrl: !!SUPABASE_URL,
-    hasSupabaseAnon: !!SUPABASE_ANON_KEY,
-    hasResendKey: !!RESEND_API_KEY,
-    hasFrom: !!RESEND_FROM,
-    origin,
-  });
-
-  let email: string = '';
-  let source: string | undefined;
-
   try {
-    const body = await req.json().catch(() => ({}));
-    email = (body?.email || '').toString().trim().toLowerCase();
-    source = body?.source ? String(body.source).slice(0, 40) : 'hero';
-
-    if (!email || !email.includes('@')) {
-      return NextResponse.json({ ok: false, error: 'invalid-email' }, { status: 400 });
+    const { email } = await req.json();
+    if (!email || typeof email !== 'string') {
+      return NextResponse.json({ error: 'Email required' }, { status: 400 });
     }
-  } catch {
-    return NextResponse.json({ ok: false, error: 'bad-json' }, { status: 400 });
-  }
 
-  // --- insert into Supabase
-  try {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const { error } = await supabase.from('email_signups').insert({
-      email,
-      source,
-    });
-    if (error) {
-      console.error('[subscribe] supabase insert failed', error);
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: 'RESEND_API_KEY missing' }, { status: 500 });
     }
-  } catch (e) {
-    console.error('[subscribe] supabase client error', e);
-  }
 
-  // --- try sending welcome email (non-fatal if it fails)
-  try {
-    if (!RESEND_API_KEY || !RESEND_FROM) {
-      console.warn('[subscribe] missing RESEND envs, skip sending');
-    } else {
-      const resend = new Resend(RESEND_API_KEY);
+    // Simple branded HTML (safe, inline styles only)
+    const html = `
+      <div style="font-family:Inter,Arial,sans-serif;max-width:640px;margin:auto;background:#0b1220;color:#eef2ff;padding:28px;border-radius:14px;border:1px solid rgba(255,255,255,.08)">
+        <div style="text-align:center;margin-bottom:14px">
+          <img src="https://moodex.io/brand/moodexlogo.png" alt="Moodex" style="height:56px"/>
+        </div>
+        <h1 style="text-align:center;margin:8px 0 18px;font-size:26px;letter-spacing:.3px">Welcome to the Moodex Beta 🚀</h1>
+        <p>Thanks for joining! You’re now on the early access list. We’ll send invites, feature drops, and tips as we roll out.</p>
+        <p style="margin-top:16px">What to expect next:</p>
+        <ul style="margin:8px 0 18px;padding-left:18px">
+          <li>Beta access link when your cohort opens</li>
+          <li>Feature updates and changelogs</li>
+          <li>Occasional alpha perks for early users</li>
+        </ul>
+        <div style="text-align:center;margin-top:20px">
+          <a href="https://moodex.io" style="display:inline-block;background:linear-gradient(135deg,#00e2fb,#ff00c3);padding:12px 22px;color:#fff;text-decoration:none;border-radius:10px;border:1px solid rgba(255,255,255,.2)">Visit Moodex</a>
+        </div>
+        <p style="margin-top:26px;font-size:12px;color:#9aa4b2">
+          You received this because you signed up at moodex.io. If this wasn’t you, please ignore this email.
+        </p>
+      </div>
+    `;
 
-      // absolute assets for email
-      const logoSrc = getAbsolute('/brand/moodexlogo.png', origin);
-      const mascotSrc = getAbsolute('/brand/mascot.png', origin);
-
-      const subject = 'Welcome to Moodex Beta 🎉';
-      const component = WelcomeEmail({
-        siteUrl: origin,
-        logoSrc,
-        mascotSrc,
-        ctaHref: origin,
-      });
-
-      const resp = await resend.emails.send({
-        from: RESEND_FROM,
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: FROM,
         to: email,
-        subject,
-        react: component,
-        headers: {
-          'X-Entity-Ref-ID': `welcome-${email}-${Date.now()}`,
-        },
-      });
+        subject: 'Welcome to Moodex Beta 🎉',
+        html,
+      }),
+    });
 
-      if (resp.error) {
-        console.error('[subscribe] resend error', resp.error);
-      } else {
-        console.log('[subscribe] resend ok', { to: email, id: resp.data?.id });
-      }
+    if (!r.ok) {
+      const t = await r.text().catch(() => '');
+      return NextResponse.json({ error: `Resend error: ${t}` }, { status: 502 });
     }
-  } catch (e) {
-    console.error('[subscribe] send failed', e);
-  }
 
-  return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message ?? 'error' }, { status: 500 });
+  }
 }
