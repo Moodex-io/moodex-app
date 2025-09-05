@@ -1,43 +1,43 @@
 // app/api/send-welcome/route.ts
-import { NextResponse } from 'next/server'
-import { Resend } from 'resend'
-import { WelcomeEmail } from '@/lib/email/welcome'
+import { NextRequest, NextResponse } from "next/server";
+import { Resend } from "resend";
+import { welcomeEmailHTML } from "@/lib/email/welcome";
 
-const resendApiKey = process.env.RESEND_API_KEY
-const fromEmail = process.env.RESEND_FROM || 'Moodex <noreply@mg.moodex.io>'
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://moodex.io'
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-export async function POST(req: Request) {
-  if (!resendApiKey) {
-    return NextResponse.json({ ok: false, error: 'RESEND_API_KEY missing' }, { status: 500 })
-  }
+// optional: change the friendly name
+const FROM = `Moodex <noreply@mg.moodex.io>`;
 
+export async function POST(req: NextRequest) {
   try {
-    const { to } = await req.json().catch(() => ({}))
-    if (!to || typeof to !== 'string') {
-      return NextResponse.json({ ok: false, error: 'Missing "to"' }, { status: 400 })
+    const { email } = await req.json();
+
+    if (!email || typeof email !== "string") {
+      return NextResponse.json({ ok: false, error: "Invalid email" }, { status: 400 });
     }
 
-    const resend = new Resend(resendApiKey)
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://moodex.io";
 
-    // Render the email (React → HTML string)
-    const html = WelcomeEmail({ siteUrl })
+    const html = welcomeEmailHTML({
+      siteUrl,
+      logoUrl: "/brand/moodexlogo.png",
+      heroUrl: "/email/mascot.png", // safe even if you haven't added it—image just won’t render
+      ctaHref: siteUrl,
+    });
 
-    const { error } = await resend.emails.send({
-      from: fromEmail,
-      to,
-      subject: 'Welcome to Moodex Beta 🎉',
+    const { data, error } = await resend.emails.send({
+      from: FROM,
+      to: email,
+      subject: "Welcome to Moodex Beta 🎉",
       html,
-    })
+    });
 
     if (error) {
-      console.error('Resend error:', error)
-      return NextResponse.json({ ok: false, error }, { status: 502 })
+      return NextResponse.json({ ok: false, error }, { status: 500 });
     }
 
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true, id: data?.id });
   } catch (e: any) {
-    console.error('send-welcome error:', e?.message || e)
-    return NextResponse.json({ ok: false, error: 'Unhandled' }, { status: 500 })
+    return NextResponse.json({ ok: false, error: e?.message || "send failed" }, { status: 500 });
   }
 }
