@@ -1,158 +1,83 @@
 // lib/email/welcome.ts
-// Polished HTML email for Moodex welcome
-// Uses inline CSS + tables (works in Gmail/Outlook). No external CSS.
-// Provide absolute URLs for images (logo/mascot) via inputs.
-
-export type WelcomeEmailOpts = {
-  siteUrl: string;        // e.g. https://moodex.io (or your Vercel domain)
-  logoUrl: string;        // e.g. https://moodex.io/brand/moodexlogo.png
-  mascotUrl: string;      // e.g. https://moodex.io/brand/mascot.png
-  ctaUrl?: string;        // optional deep link for the CTA
-};
-
-export function renderWelcomeEmail({
-  siteUrl,
-  logoUrl,
-  mascotUrl,
-  ctaUrl,
-}: WelcomeEmailOpts) {
-  const cleanUrl = siteUrl
-    .replace(/^https?:\/\/(www\.)?/, "")
-    .replace(/\/+$/, "");
-
-  const cta = ctaUrl || siteUrl;
-
-  // Keep total HTML under ~100KB to avoid Gmail clipping
-  // Width = 600px, safe for most clients
+// Minimal, safe HTML generator (no JSX) to avoid build-time parser issues.
+export function WelcomeEmail({ siteUrl }: { siteUrl: string }) {
+  const clean = (u: string) => u.replace(/^https?:\/\//, '')
 
   return `
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Welcome to the Moodex Beta 🎉</title>
-  <meta name="color-scheme" content="dark light">
-  <meta name="supported-color-schemes" content="dark light">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <style>
-    /* Some clients ignore <style>, so all critical styles are inline below. */
-    @media (max-width: 620px) {
-      .container { width: 100% !important; }
-      .px { padding-left: 16px !important; padding-right: 16px !important; }
-      .center { text-align: center !important; }
-      .stack { display: block !important; width: 100% !important; }
-      .card { padding: 16px !important; }
-      .hero-title { font-size: 26px !important; line-height: 34px !important; }
-    }
-  </style>
-</head>
-<body style="margin:0; padding:0; background:#0b1220; font-family: Inter, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color:#e5e7eb;">
-  <!-- Outer wrapper (full width) -->
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#0b1220;">
-    <tr>
-      <td align="center" style="padding: 32px 16px;">
-        <!-- Fixed-width container -->
-        <table class="container" role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:600px; max-width:600px;">
-          <!-- Logo -->
-          <tr>
-            <td align="center" style="padding: 8px 0 12px 0;">
-              <img src="${logoUrl}" width="128" height="auto" alt="Moodex" style="display:block; width:128px; height:auto; border:0; outline:none; text-decoration:none;">
-            </td>
-          </tr>
+  <head>
+    <meta charSet="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Welcome to Moodex Beta</title>
+  </head>
+  <body style="margin:0; padding:24px; background:#0b1117; font-family:Inter,Segoe UI,Arial,sans-serif; color:#e5e7eb;">
+    <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="640" border="0" cellpadding="0" cellspacing="0" style="max-width:640px; width:100%;">
+            <tr>
+              <td align="center" style="padding:16px 0 0 0;">
+                <img src="${siteUrl}/brand/moodexlogo.png" width="36" height="36" alt="Moodex" style="display:block; margin:0 auto 10px auto;"/>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding-bottom:8px;">
+                <img src="${siteUrl}/brand/mascot.png" width="44" height="44" alt="Moodex mascot" style="display:block; margin:0 auto 8px auto;"/>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 16px 20px 16px;">
+                <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#0f1720; border:1px solid #14212e; border-radius:16px;">
+                  <tr>
+                    <td style="padding:32px 28px;">
+                      <h1 style="margin:0 0 14px 0; font-size:28px; line-height:1.2; color:#ffffff; font-weight:800;">
+                        Welcome to the Moodex Beta 🚀
+                      </h1>
 
-          <!-- Mascot -->
-          <tr>
-            <td align="center" style="padding: 0 0 16px 0;">
-              <img src="${mascotUrl}" width="64" height="64" alt="Moodex mascot" style="display:block; width:64px; height:64px; border-radius:16px; border:0;">
-            </td>
-          </tr>
+                      <p style="margin:0 0 14px 0; font-size:15px; line-height:1.7; color:#cbd5e1;">
+                        You’re officially on the Early Access list! Moodex reveals live market mood & narrative signals so you act on <em>signal</em>, not noise.
+                      </p>
 
-          <!-- Card -->
-          <tr>
-            <td class="px" style="padding: 0 24px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#0f172a; border-radius:16px; box-shadow:0 12px 40px rgba(0,0,0,0.35);">
-                <tr>
-                  <td class="card" style="padding: 28px 28px 10px 28px;">
-                    <h1 class="hero-title" style="margin:0; font-size:28px; line-height:36px; color:#f8fafc; font-weight:800; letter-spacing:0.2px;">
-                      Welcome to the Moodex Beta 🚀
-                    </h1>
-                    <p style="margin:12px 0 0 0; font-size:15px; line-height:24px; color:#cbd5e1;">
-                      You’re officially on the Early Access list. Moodex reveals real-time market mood &amp; narratives so you act on <strong style="color:#fff">signal</strong>, not noise.
-                    </p>
+                      <div style="height:14px;"></div>
 
-                    <!-- CTA -->
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:18px;">
-                      <tr>
-                        <td align="center" bgcolor="#5eead4" style="border-radius:12px; background: linear-gradient(135deg,#33d6ff,#a855f7);">
-                          <a href="${cta}" style="display:inline-block; padding:12px 22px; font-weight:700; font-size:14px; line-height:20px; color:#0b1220; text-decoration:none;">
-                            Explore Moodex
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
+                      <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;">
+                        <tr>
+                          <td align="center" bgcolor="#3b82f6" style="border-radius:12px;">
+                            <a href="${siteUrl}" style="display:inline-block; padding:12px 18px; font-size:14px; font-weight:700; text-decoration:none; color:#ffffff;">
+                              Explore Moodex
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
 
-                    <!-- Divider -->
-                    <div style="height:1px; background:linear-gradient(90deg,rgba(51,214,255,0.3),rgba(168,85,247,0.3)); margin:22px 0;"></div>
+                      <div style="height:22px;"></div>
 
-                    <!-- “What’s next” title -->
-                    <h2 style="margin:0 0 10px 0; font-size:16px; line-height:22px; color:#e2e8f0; font-weight:800;">What’s next</h2>
+                      <h3 style="margin:0 0 10px 0; font-size:16px; font-weight:800; color:#ffffff;">What’s next</h3>
+                      <ul style="margin:0; padding:0 0 0 18px; color:#cbd5e1; font-size:14px; line-height:1.8;">
+                        <li>Beta access link when your cohort opens</li>
+                        <li>Feature drops and changelogs</li>
+                        <li>Occasional alpha perks for early users</li>
+                      </ul>
 
-                    <!-- Feature cards (stack on mobile) -->
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-                      <tr>
-                        <td class="stack" valign="top" style="width:33.33%; padding-right:10px;">
-                          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#111827; border-radius:12px;">
-                            <tr>
-                              <td style="padding:14px;">
-                                <div style="font-size:13px; color:#9ca3af; margin-bottom:6px;">Cohorts</div>
-                                <div style="font-size:14px; color:#e5e7eb; font-weight:700; line-height:20px;">Beta access link when your cohort opens</div>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                        <td class="stack" valign="top" style="width:33.33%; padding:0 5px;">
-                          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#111827; border-radius:12px;">
-                            <tr>
-                              <td style="padding:14px;">
-                                <div style="font-size:13px; color:#9ca3af; margin-bottom:6px;">Product</div>
-                                <div style="font-size:14px; color:#e5e7eb; font-weight:700; line-height:20px;">Feature drops &amp; changelogs</div>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                        <td class="stack" valign="top" style="width:33.33%; padding-left:10px;">
-                          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#111827; border-radius:12px;">
-                            <tr>
-                              <td style="padding:14px;">
-                                <div style="font-size:13px; color:#9ca3af; margin-bottom:6px;">Perks</div>
-                                <div style="font-size:14px; color:#e5e7eb; font-weight:700; line-height:20px;">Occasional alpha perks for early users</div>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
+                      <div style="height:22px;"></div>
 
-                    <!-- Footer note -->
-                    <p style="margin:20px 0 0 0; font-size:12px; line-height:18px; color:#94a3b8; text-align:center;">
-                      You received this because you signed up at
-                      <a href="${siteUrl}" style="color:#9cd7ff; text-decoration:none;">${cleanUrl}</a>.
-                      If this wasn’t you, please ignore this email.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Spacer -->
-          <tr><td style="height:24px; line-height:24px;">&nbsp;</td></tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
+                      <p style="margin:0; font-size:12px; color:#94a3b8; line-height:1.6; text-align:center;">
+                        You received this because you signed up at
+                        <a href="${siteUrl}" style="color:#9cd7ff; text-decoration:none;">${clean(siteUrl)}</a>.
+                        If this wasn’t you, please ignore this email.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr><td style="height:24px;"></td></tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
 </html>
-`;
+  `.trim()
 }
