@@ -1,4 +1,4 @@
-// lib/email/welcome.ts
+// lib/email/welcome.tsx
 import * as React from 'react';
 
 type Props = {
@@ -18,19 +18,17 @@ export function WelcomeEmail({ siteUrl, logoSrc, mascotSrc, ctaHref }: Props) {
         <title>Welcome to Moodex Beta</title>
       </head>
       <body style={{ margin: 0, background: '#0b1117', color: '#e5eef7', fontFamily: 'Inter, ui-sans-serif, system-ui' }}>
-        <table width="100%" cellPadding="0" cellSpacing="0" role="presentation">
+        <table width="100%" cellPadding={0} cellSpacing={0} role="presentation">
           <tbody>
             <tr>
               <td align="center" style={{ padding: '36px 16px' }}>
-                {/* header logos */}
                 <img src={logoSrc} alt="Moodex" width={100} height={100} style={{ display: 'block', margin: '0 auto 10px', borderRadius: 16 }} />
                 <img src={mascotSrc} alt="Moodex mascot" width={90} height={90} style={{ display: 'block', margin: '0 auto 24px' }} />
 
-                {/* card */}
                 <table
-                  width="560"
-                  cellPadding="0"
-                  cellSpacing="0"
+                  width={560}
+                  cellPadding={0}
+                  cellSpacing={0}
                   role="presentation"
                   style={{
                     maxWidth: 560,
@@ -88,7 +86,6 @@ export function WelcomeEmail({ siteUrl, logoSrc, mascotSrc, ctaHref }: Props) {
                     </tr>
                   </tbody>
                 </table>
-                {/* /card */}
               </td>
             </tr>
           </tbody>
