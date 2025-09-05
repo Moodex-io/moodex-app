@@ -1,42 +1,53 @@
-import { NextRequest, NextResponse } from 'next/server';
+// app/api/send-welcome/route.ts
+import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import React from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import WelcomeEmail from '@/lib/email/welcome';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+export const dynamic = 'force-dynamic';
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    const { email, siteUrl, logoSrc, mascotSrc } = await req.json();
-
-    if (!process.env.RESEND_API_KEY) {
-      console.error('RESEND_API_KEY not set');
-      return NextResponse.json({ ok: false, error: 'missing_resend_key' }, { status: 500 });
-    }
-    if (!email || !siteUrl || !logoSrc || !mascotSrc) {
-      return NextResponse.json({ ok: false, error: 'missing_fields' }, { status: 400 });
+    const { RESEND_API_KEY = '', RESEND_FROM = '' } = process.env;
+    if (!RESEND_API_KEY || !RESEND_FROM) {
+      return NextResponse.json({ ok: false, error: 'missing-resend-env' }, { status: 500 });
     }
 
-    const html = renderToStaticMarkup(
-      <WelcomeEmail siteUrl={siteUrl} logoSrc={logoSrc} mascotSrc={mascotSrc} />
-    );
+    const body = await req.json().catch(() => ({}));
+    const email = String(body?.email || '').trim().toLowerCase();
+    const siteUrl = String(body?.siteUrl || '');
+    const logoSrc = String(body?.logoSrc || '');
+    const mascotSrc = String(body?.mascotSrc || '');
 
-    const { data, error } = await resend.emails.send({
-      from: 'Moodex <noreply@mg.moodex.io>',
-      to: email,
-      subject: 'Welcome to Moodex Beta 🎉',
-      html,
+    if (!email || !email.includes('@')) {
+      return NextResponse.json({ ok: false, error: 'invalid-email' }, { status: 400 });
+    }
+
+    const resend = new Resend(RESEND_API_KEY);
+
+    // No JSX here – use createElement
+    const element = React.createElement(WelcomeEmail, {
+      siteUrl,
+      logoSrc,
+      mascotSrc,
     });
 
-    if (error) {
-      console.error('Resend error:', error);
-      return NextResponse.json({ ok: false, error: String(error) }, { status: 500 });
+    const resp = await resend.emails.send({
+      from: RESEND_FROM,
+      to: email,
+      subject: 'Welcome to Moodex Beta 🎉',
+      react: element,
+      headers: { 'X-Entity-Ref-ID': `send-welcome-${email}-${Date.now()}` },
+    });
+
+    if (resp.error) {
+      console.error('[send-welcome] resend error', resp.error);
+      return NextResponse.json({ ok: false, error: String(resp.error) }, { status: 500 });
     }
 
-    return NextResponse.json({ ok: true, id: data?.id ?? null });
+    return NextResponse.json({ ok: true, id: resp.data?.id });
   } catch (e: any) {
-    console.error('send-welcome crash:', e);
-    return NextResponse.json({ ok: false, error: e?.message || 'unknown' }, { status: 500 });
+    console.error('[send-welcome] failed', e);
+    return NextResponse.json({ ok: false, error: 'server-error' }, { status: 500 });
   }
 }
