@@ -1,53 +1,43 @@
 // app/api/send-welcome/route.ts
-import { NextResponse } from 'next/server';
-import { Resend } from 'resend';
-import React from 'react';
-import WelcomeEmail from '@/lib/email/welcome';
+import { NextResponse } from 'next/server'
+import { Resend } from 'resend'
+import { WelcomeEmail } from '@/lib/email/welcome'
 
-export const dynamic = 'force-dynamic';
+const resendApiKey = process.env.RESEND_API_KEY
+const fromEmail = process.env.RESEND_FROM || 'Moodex <noreply@mg.moodex.io>'
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://moodex.io'
 
 export async function POST(req: Request) {
+  if (!resendApiKey) {
+    return NextResponse.json({ ok: false, error: 'RESEND_API_KEY missing' }, { status: 500 })
+  }
+
   try {
-    const { RESEND_API_KEY = '', RESEND_FROM = '' } = process.env;
-    if (!RESEND_API_KEY || !RESEND_FROM) {
-      return NextResponse.json({ ok: false, error: 'missing-resend-env' }, { status: 500 });
+    const { to } = await req.json().catch(() => ({}))
+    if (!to || typeof to !== 'string') {
+      return NextResponse.json({ ok: false, error: 'Missing "to"' }, { status: 400 })
     }
 
-    const body = await req.json().catch(() => ({}));
-    const email = String(body?.email || '').trim().toLowerCase();
-    const siteUrl = String(body?.siteUrl || '');
-    const logoSrc = String(body?.logoSrc || '');
-    const mascotSrc = String(body?.mascotSrc || '');
+    const resend = new Resend(resendApiKey)
 
-    if (!email || !email.includes('@')) {
-      return NextResponse.json({ ok: false, error: 'invalid-email' }, { status: 400 });
-    }
+    // Render the email (React → HTML string)
+    const html = WelcomeEmail({ siteUrl })
 
-    const resend = new Resend(RESEND_API_KEY);
-
-    // No JSX here – use createElement
-    const element = React.createElement(WelcomeEmail, {
-      siteUrl,
-      logoSrc,
-      mascotSrc,
-    });
-
-    const resp = await resend.emails.send({
-      from: RESEND_FROM,
-      to: email,
+    const { error } = await resend.emails.send({
+      from: fromEmail,
+      to,
       subject: 'Welcome to Moodex Beta 🎉',
-      react: element,
-      headers: { 'X-Entity-Ref-ID': `send-welcome-${email}-${Date.now()}` },
-    });
+      html,
+    })
 
-    if (resp.error) {
-      console.error('[send-welcome] resend error', resp.error);
-      return NextResponse.json({ ok: false, error: String(resp.error) }, { status: 500 });
+    if (error) {
+      console.error('Resend error:', error)
+      return NextResponse.json({ ok: false, error }, { status: 502 })
     }
 
-    return NextResponse.json({ ok: true, id: resp.data?.id });
+    return NextResponse.json({ ok: true })
   } catch (e: any) {
-    console.error('[send-welcome] failed', e);
-    return NextResponse.json({ ok: false, error: 'server-error' }, { status: 500 });
+    console.error('send-welcome error:', e?.message || e)
+    return NextResponse.json({ ok: false, error: 'Unhandled' }, { status: 500 })
   }
 }
