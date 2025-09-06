@@ -1,4 +1,4 @@
-// lib/email/welcome.ts
+// lib/email/welcome.tsx
 // Reusable, pure-HTML generator (no JSX)
 
 type WelcomeArgs = {
