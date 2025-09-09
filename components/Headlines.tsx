@@ -1,92 +1,84 @@
-'use client';
+// components/Headlines.tsx
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 type Headline = {
   title: string;
+  url: string;
   source?: string;
-  url?: string;
-  published_at?: string; // ISO string optional
+  time?: string | number;
 };
 
 export default function Headlines({
-  title = 'Latest crypto news',
-  market = 'crypto',
-}: { title?: string; market?: string }) {
-  const [data, setData] = useState<Headline[] | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
+  title = "Latest news",
+  market = "crypto",
+}: {
+  title?: string;
+  market?: "crypto" | "stocks";
+}) {
+  const [items, setItems] = useState<Headline[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let alive = true;
-    (async () => {
+    let cancelled = false;
+    async function load() {
       try {
-        const base = process.env.NEXT_PUBLIC_WORKER_URL!;
-        const res = await fetch(
-          `${base}/news?market=${encodeURIComponent(market)}`,
-          { cache: 'no-store' }
-        );
-        if (!res.ok) throw new Error(`Worker /news ${res.status}`);
-        const json = await res.json();
-        if (!alive) return;
-        setData(Array.isArray(json?.headlines) ? json.headlines.slice(0, 10) : []);
+        setError(null);
+        const res = await fetch(`/api/news?market=${encodeURIComponent(market)}`, {
+          next: { revalidate: 60 },
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!cancelled) setItems(data?.items ?? []);
       } catch (e: any) {
-        setErr(e?.message ?? 'Failed to load news.');
-      } finally {
-        setLoading(false);
+        if (!cancelled) setError(e?.message ?? "failed");
       }
-    })();
+    }
+    load();
+    const id = setInterval(load, 60_000);
     return () => {
-      alive = false;
+      cancelled = true;
+      clearInterval(id);
     };
   }, [market]);
 
   return (
-    <section className="card p-4">
-      <div className="card-head">
-        <h3 className="h3 text-center w-full">{title}</h3>
+    <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-lg font-semibold">{title}</h3>
       </div>
 
-      <div className="min-h-[84px]">
-        {loading ? (
-          <div className="flex flex-col gap-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="skeleton h-6 rounded-md" />
-            ))}
-          </div>
-        ) : err ? (
-          <div className="flex items-center justify-center text-center">
-            <p className="muted">⚠ {err}</p>
-          </div>
-        ) : !data || data.length === 0 ? (
-          <div className="flex items-center justify-center text-center">
-            <p className="muted">No headlines right now.</p>
-          </div>
-        ) : (
-          <ul className="news-list">
-            {data.map((h, i) => (
-              <li key={i} className="news-item">
-                <a
-                  href={h.url ?? '#'}
-                  target={h.url ? '_blank' : undefined}
-                  rel="noreferrer"
-                >
-                  {h.title}
-                </a>
-                <span className="muted">
-                  {h.source ? ` • ${h.source}` : ''}
-                  {h.published_at
-                    ? ` • ${new Date(h.published_at).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}`
-                    : ''}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      {error && (
+        <div className="text-sm text-rose-300">
+          Couldn’t load headlines: {error}
+        </div>
+      )}
+
+      {!items && !error && (
+        <div className="text-sm text-slate-400">Loading…</div>
+      )}
+
+      {items && items.length > 0 && (
+        <ul className="space-y-3">
+          {items.map((h, idx) => (
+            <li key={idx}>
+              <a
+                href={h.url}
+                target="_blank"
+                rel="noreferrer"
+                className="block rounded-lg bg-slate-800/60 px-3 py-2 hover:bg-slate-800"
+              >
+                <div className="font-medium">{h.title}</div>
+                <div className="text-slate-400 text-xs mt-0.5">
+                  {h.source ? `${h.source}` : ""}
+                  {h.time ? ` · ${new Date(h.time).toLocaleTimeString()}` : ""}
+                </div>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
