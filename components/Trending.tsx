@@ -1,85 +1,77 @@
-'use client';
+// components/Trending.tsx
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
-type TrendingItem = {
-  symbol?: string;
-  name?: string;
-  score?: number; // optional “buzz” score if your Worker returns one
-  url?: string;   // optional details page
-};
+type Item = { symbol: string; score?: number; change?: number; label?: string };
 
 export default function Trending({
-  title = 'Trending now',
-  market = 'crypto',
-}: { title?: string; market?: string }) {
-  const [data, setData] = useState<TrendingItem[] | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
+  title = "Trending now",
+  market = "crypto",
+}: {
+  title?: string;
+  market?: "crypto" | "stocks";
+}) {
+  const [items, setItems] = useState<Item[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let alive = true;
-    (async () => {
+    let cancelled = false;
+
+    async function load() {
       try {
-        const base = process.env.NEXT_PUBLIC_WORKER_URL!;
-        const res = await fetch(
-          `${base}/trending?market=${encodeURIComponent(market)}`,
-          { cache: 'no-store' }
-        );
-        if (!res.ok) throw new Error(`Worker /trending ${res.status}`);
-        const json = await res.json();
-        if (!alive) return;
-        setData(Array.isArray(json?.items) ? json.items.slice(0, 12) : []);
+        setError(null);
+        const res = await fetch(`/api/trending?market=${encodeURIComponent(market)}`, {
+          next: { revalidate: 60 }, // cache hint for Next
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!cancelled) setItems(data?.items ?? []);
       } catch (e: any) {
-        setErr(e?.message ?? 'Failed to load trending.');
-      } finally {
-        setLoading(false);
+        if (!cancelled) setError(e?.message ?? "failed");
       }
-    })();
+    }
+
+    load();
+    const id = setInterval(load, 60_000);
     return () => {
-      alive = false;
+      cancelled = true;
+      clearInterval(id);
     };
   }, [market]);
 
   return (
-    <section className="card p-4">
-      <div className="card-head">
-        <h3 className="h3 text-center w-full">{title}</h3>
+    <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-lg font-semibold">{title}</h3>
       </div>
 
-      {/* Centered container so empty/error states don’t look off */}
-      <div className="flex items-center justify-center text-center min-h-[84px]">
-        {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 w-full">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div key={i} className="skeleton h-9 rounded-md" />
-            ))}
-          </div>
-        ) : err ? (
-          <p className="muted">⚠ {err}</p>
-        ) : !data || data.length === 0 ? (
-          <p className="muted">No trending items right now.</p>
-        ) : (
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {data.map((it, i) => (
-              <a
-                key={`${it.symbol ?? it.name ?? i}-${i}`}
-                className="trend-chip"
-                href={it.url ?? '#'}
-                target={it.url ? '_blank' : undefined}
-                rel="noreferrer"
-                onClick={(e) => !it.url && e.preventDefault()}
-                title={it.name ?? it.symbol}
-              >
-                <span className="code">{it.symbol ?? it.name}</span>
-                {typeof it.score === 'number' && (
-                  <span className="score">{Math.round(it.score)}</span>
-                )}
-              </a>
-            ))}
-          </div>
-        )}
-      </div>
+      {error && (
+        <div className="text-sm text-rose-300">
+          Couldn’t load trending: {error}
+        </div>
+      )}
+
+      {!items && !error && (
+        <div className="text-sm text-slate-400">Loading…</div>
+      )}
+
+      {items && items.length > 0 && (
+        <ul className="space-y-2">
+          {items.map((it, i) => (
+            <li
+              key={`${it.symbol}-${i}`}
+              className="flex items-center justify-between rounded-lg bg-slate-800/60 px-3 py-2"
+            >
+              <span className="font-medium">{it.symbol || it.label}</span>
+              <span className="text-slate-400 text-sm">
+                {typeof it.score === "number" ? `Score ${it.score}` : ""}
+                {typeof it.change === "number" ? ` · ${it.change.toFixed(2)}%` : ""}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
