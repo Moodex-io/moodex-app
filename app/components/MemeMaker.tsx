@@ -53,11 +53,7 @@ export default function MemeMaker() {
         </button>
       </div>
 
-      {error && (
-        <p className="mt-3 text-sm text-red-400">
-          {error}
-        </p>
-      )}
+      {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
 
       {ideas && (
         <div className="mt-5 rounded-lg bg-slate-800/60 p-4">
